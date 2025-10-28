@@ -50,7 +50,15 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
 
           document.cookie = `accessToken=${res.accessToken}; path=/; max-age=86400;`;
-
+          
+          // Update streak for students (don't await to not block login)
+          if (res.user.role === 'student') {
+            import('./useStreakStore').then(({ useStreakStore }) => {
+              useStreakStore.getState().updateStreak().catch(err => 
+                console.error('Streak update error:', err)
+              );
+            });
+          }
 
 
 

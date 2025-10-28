@@ -20,6 +20,8 @@ import progressRouter from "./routes/progressRoutes.js";
 import razorpaywhRoutes from "./webhooks/razorpay-wh.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 import anncRouter from "./routes/genAnnouncementRoutes.js";
+import streakRouter from "./routes/streakRoutes.js";
+import { initializeBadges } from "./controllers/streakController.js";
 
 
 dotenv.config();
@@ -93,12 +95,15 @@ app.use("/api/free-pdfs", pdfRouter);
 app.use("/api/progress", progressRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/general-announcements", anncRouter);
+app.use("/api/streaks", streakRouter);
 
 // app.listen(3000, () => {
 //   console.log("Server running on http://localhost:3000");
 // });
 
 const PORT = 3000;
-server.listen(PORT, () =>
-  console.log(`Express + Socket.IO running on http://localhost:${PORT}`)
-);
+server.listen(PORT, async () => {
+  console.log(`Express + Socket.IO running on http://localhost:${PORT}`);
+  // Badges already initialized manually
+  // await initializeBadges();
+});

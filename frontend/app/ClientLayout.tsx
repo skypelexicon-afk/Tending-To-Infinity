@@ -16,6 +16,7 @@ import EducatorDashboardNav from '@/components/Navbar/DashboardNav/EducatorDashN
 import AdminNavbar from '@/components/Navbar/AdminNav';
 import StudentDashboardNav from '@/components/Navbar/DashboardNav/StudentDashNav';
 import StudentNavbar from '@/components/Navbar/StudentNav';
+import FloatingStreakWidget from '@/components/FloatingStreakWidget';
 
 export default function ClientLayout({
     children,
@@ -133,6 +134,7 @@ export default function ClientLayout({
             {showLoginModal && <LoginModal />}
             {showSignupModal && <SignupModal />}
             {showForgotPasswordModal && <ForgotPasswordModal />}
+            <FloatingStreakWidget />
         </>
     );
 }

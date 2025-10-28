@@ -1,12 +1,92 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { db } from "../db/client.js";
-import { users, orders, courses, bundleCourses, bundles, cart, cartCourses, orderItems } from "../schema/schema.js";
+import { users, orders, courses, bundleCourses, bundles, cart, cartCourses, orderItems, userStreaks, streakHistory } from "../schema/schema.js";
 import { eq, count, sum, desc, sql, and, inArray, or, isNotNull } from "drizzle-orm";
 import logger from "../utils/logger.js";
 import { sendPasswordResetEmail, sendVerificationCode, sendWelcomeEmail } from "../middlewares/email.js";
 import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
+
+// Helper function to update user streak on login
+const updateUserStreak = async (userId) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get user's current streak data
+    let [userStreak] = await db
+      .select()
+      .from(userStreaks)
+      .where(eq(userStreaks.user_id, userId));
+
+    // If no streak record exists, create one
+    if (!userStreak) {
+      await db.insert(userStreaks).values({
+        user_id: userId,
+        current_streak: 1,
+        longest_streak: 1,
+        last_active_date: today,
+        total_days_active: 1,
+      });
+
+      // Record today's activity
+      await db.insert(streakHistory).values({
+        user_id: userId,
+        activity_date: today,
+        was_active: true,
+      });
+      
+      return;
+    }
+
+    // Check if user already logged in today
+    const lastActiveDate = new Date(userStreak.last_active_date);
+    lastActiveDate.setHours(0, 0, 0, 0);
+
+    if (lastActiveDate.getTime() === today.getTime()) {
+      return; // Already logged in today
+    }
+
+    // Calculate day difference
+    const dayDiff = Math.floor((today - lastActiveDate) / (1000 * 60 * 60 * 24));
+
+    let newStreak;
+    let totalDays = userStreak.total_days_active + 1;
+
+    if (dayDiff === 1) {
+      // Consecutive day - increment streak
+      newStreak = userStreak.current_streak + 1;
+    } else {
+      // Missed days - reset streak to 1
+      newStreak = 1;
+    }
+
+    const longestStreak = Math.max(newStreak, userStreak.longest_streak);
+
+    // Update streak record
+    await db
+      .update(userStreaks)
+      .set({
+        current_streak: newStreak,
+        longest_streak: longestStreak,
+        last_active_date: today,
+        total_days_active: totalDays,
+        updated_at: new Date(),
+      })
+      .where(eq(userStreaks.user_id, userId));
+
+    // Record today's activity
+    await db.insert(streakHistory).values({
+      user_id: userId,
+      activity_date: today,
+      was_active: true,
+    });
+  } catch (error) {
+    console.error("Error updating user streak:", error);
+  }
+};
+
 
 // Register a new user
 export const register = async (req, res) => {
@@ -218,6 +298,14 @@ export const login = async (req, res) => {
     });
 
     logger.info(`User logged in: ${email}`);
+    
+    // Update streak for student users (async, don't wait)
+    if (user.role === 'student') {
+      updateUserStreak(user.id).catch(err => 
+        console.error('Streak update error:', err)
+      );
+    }
+    
     res.status(200).json({
       accessToken,
       user: {

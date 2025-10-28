@@ -244,6 +244,46 @@ export const subsectionProgress = pgTable("subsection_progress", {
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// User Streaks - Track daily learning streaks
+export const userStreaks = pgTable("user_streaks", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  current_streak: integer("current_streak").notNull().default(0),
+  longest_streak: integer("longest_streak").notNull().default(0),
+  last_active_date: timestamp("last_active_date"),
+  total_days_active: integer("total_days_active").notNull().default(0),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Badges - Define all available badges
+export const badges = pgTable("badges", {
+  id: serial("id").primaryKey(),
+  badge_name: text("badge_name").notNull().unique(),
+  milestone_days: integer("milestone_days").notNull(),
+  badge_shape: text("badge_shape").notNull(), // circle, flame, star, crystal, infinity, etc.
+  animation_type: text("animation_type").notNull(), // glow, flicker, burst, shine, pulse
+  description: text("description"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+// User Badges - Track earned badges per user
+export const userBadges = pgTable("user_badges", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  badge_name: text("badge_name").notNull(),
+  earned_at: timestamp("earned_at").notNull().defaultNow(),
+});
+
+// Streak History - Track daily activity for calendar view
+export const streakHistory = pgTable("streak_history", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  activity_date: timestamp("activity_date").notNull(),
+  was_active: boolean("was_active").notNull().default(true),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Relations ////////////////////////////////////////////////////////////////////////
 import { relations } from "drizzle-orm";
 
@@ -382,5 +422,26 @@ export const subsectionProgressRelations = relations(subsectionProgress, ({ one 
   subsection: one(subSections, {
     fields: [subsectionProgress.subsection_id],
     references: [subSections.id],
+  }),
+}));
+
+export const userStreaksRelations = relations(userStreaks, ({ one }) => ({
+  user: one(users, {
+    fields: [userStreaks.user_id],
+    references: [users.id],
+  }),
+}));
+
+export const userBadgesRelations = relations(userBadges, ({ one }) => ({
+  user: one(users, {
+    fields: [userBadges.user_id],
+    references: [users.id],
+  }),
+}));
+
+export const streakHistoryRelations = relations(streakHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [streakHistory.user_id],
+    references: [users.id],
   }),
 }));
